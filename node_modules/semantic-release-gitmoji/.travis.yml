@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+  - 10
+  - 12
+
+install:
+  - npm ci
+  - npm run link
+
+script:
+  - npm run lint
+  - npm test
+
+jobs:
+  include:
+    - stage: release
+      node_js: lts/*
+      script:
+        - npm run release
