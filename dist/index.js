@@ -16536,10 +16536,10 @@ module.exports = require("zlib");
 var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
-const core = __nccwpck_require__(2186)
-const Github = __nccwpck_require__(8396)
-const Vercel = __nccwpck_require__(847)
-const { addSchema } = __nccwpck_require__(8505)
+const core = __nccwpck_require__(2186);
+const Github = __nccwpck_require__(8396);
+const Vercel = __nccwpck_require__(847);
+const { addSchema } = __nccwpck_require__(8505);
 
 const {
 	GITHUB_DEPLOYMENT,
@@ -16558,69 +16558,70 @@ const {
 	LOG_URL,
 	DEPLOY_PR_FROM_FORK,
 	IS_FORK,
-	ACTOR
-} = __nccwpck_require__(4570)
+	ACTOR,
+} = __nccwpck_require__(4570);
 
 const run = async () => {
-	const github = Github.init()
+	const github = Github.init();
 
 	// Refuse to deploy an untrusted fork
 	if (IS_FORK === true && DEPLOY_PR_FROM_FORK === false) {
-		core.warning(`PR is from fork and DEPLOY_PR_FROM_FORK is set to false`)
+		core.warning(`PR is from fork and DEPLOY_PR_FROM_FORK is set to false`);
 		const body = `
-			Refusing to deploy this Pull Request to Vercel because it originates from @${ ACTOR }'s fork.
+			Refusing to deploy this Pull Request to Vercel because it originates from @${ACTOR}'s fork.
 
-			**@${ USER }** To allow this behaviour set \`DEPLOY_PR_FROM_FORK\` to true ([more info](https://github.com/BetaHuhn/deploy-to-vercel-action#deploying-a-pr-made-from-a-fork-or-dependabot)).
-		`
+			**@${USER}** To allow this behaviour set \`DEPLOY_PR_FROM_FORK\` to true ([more info](https://github.com/BetaHuhn/deploy-to-vercel-action#deploying-a-pr-made-from-a-fork-or-dependabot)).
+		`;
 
-		const comment = await github.createComment(body)
-		core.info(`Comment created: ${ comment.html_url }`)
+		const comment = await github.createComment(body);
+		core.info(`Comment created: ${comment.html_url}`);
 
-		core.setOutput('DEPLOYMENT_CREATED', false)
-		core.setOutput('COMMENT_CREATED', true)
+		core.setOutput('DEPLOYMENT_CREATED', false);
+		core.setOutput('COMMENT_CREATED', true);
 
-		core.info('Done')
-		return
+		core.info('Done');
+		return;
 	}
 
 	if (GITHUB_DEPLOYMENT) {
-		core.info('Creating GitHub deployment')
-		const ghDeployment = await github.createDeployment()
+		core.info('Creating GitHub deployment');
+		const ghDeployment = await github.createDeployment();
 
-		core.info(`Deployment #${ ghDeployment.id } created`)
+		core.info(`Deployment #${ghDeployment.id} created`);
 
-		await github.updateDeployment('pending')
-		core.info(`Deployment #${ ghDeployment.id } status changed to "pending"`)
+		await github.updateDeployment('pending');
+		core.info(`Deployment #${ghDeployment.id} status changed to "pending"`);
 	}
 
 	try {
-		core.info(`Creating deployment with Vercel CLI`)
-		const vercel = Vercel.init()
+		core.info(`Creating deployment with Vercel CLI`);
+		const vercel = Vercel.init();
 
-		const commit = ATTACH_COMMIT_METADATA ? await github.getCommit() : undefined
-		const deploymentUrl = await vercel.deploy(commit)
+		const commit = ATTACH_COMMIT_METADATA
+			? await github.getCommit()
+			: undefined;
+		const deploymentUrl = await vercel.deploy(commit);
 
-		core.info('Successfully deployed to Vercel!')
+		core.info('Successfully deployed to Vercel!');
 
-		const deploymentUrls = []
+		const deploymentUrls = [];
 		if (IS_PR && PR_PREVIEW_DOMAIN) {
-			core.info(`Assigning custom preview domain to PR`)
+			core.info(`Assigning custom preview domain to PR`);
 
-			const alias = PR_PREVIEW_DOMAIN
-				.replace('{USER}', USER)
+			const alias = PR_PREVIEW_DOMAIN.replace('{USER}', USER)
 				.replace('{REPO}', REPOSITORY)
 				.replace('{BRANCH}', BRANCH)
 				.replace('{PR}', PR_NUMBER)
 				.replace('{SHA}', SHA.substring(0, 7))
-				.toLowerCase()
+				.toLowerCase();
 
-			await vercel.assignAlias(alias)
+			await vercel.assignAlias(alias);
 
-			deploymentUrls.push(addSchema(alias))
+			deploymentUrls.push(addSchema(alias));
 		}
 
 		if (!IS_PR && ALIAS_DOMAINS) {
-			core.info(`Assigning custom domains to Vercel deployment`)
+			core.info(`Assigning custom domains to Vercel deployment`);
 
 			for (let i = 0; i < ALIAS_DOMAINS.length; i++) {
 				const alias = ALIAS_DOMAINS[i]
@@ -16628,88 +16629,95 @@ const run = async () => {
 					.replace('{REPO}', REPOSITORY)
 					.replace('{BRANCH}', BRANCH)
 					.replace('{SHA}', SHA.substring(0, 7))
-					.toLowerCase()
+					.toLowerCase();
 
-				await vercel.assignAlias(alias)
+				await vercel.assignAlias(alias);
 
-				deploymentUrls.push(addSchema(alias))
+				deploymentUrls.push(addSchema(alias));
 			}
 		}
 
-		deploymentUrls.push(addSchema(deploymentUrl))
-		const previewUrl = deploymentUrls[0]
+		deploymentUrls.push(addSchema(deploymentUrl));
+		const previewUrl = deploymentUrls[0];
+		core.exportVariable('VERCEL_PREVIEW_URL', previewUrl);
 
-		const deployment = await vercel.getDeployment()
-		core.info(`Deployment "${ deployment.id }" available at: ${ deploymentUrls.join(', ') }`)
+		const deployment = await vercel.getDeployment();
+		core.info(
+			`Deployment "${deployment.id}" available at: ${deploymentUrls.join(', ')}`
+		);
 
 		if (GITHUB_DEPLOYMENT) {
-			core.info('Changing GitHub deployment status to "success"')
-			await github.updateDeployment('success', previewUrl)
+			core.info('Changing GitHub deployment status to "success"');
+			await github.updateDeployment('success', previewUrl);
 		}
 
 		if (IS_PR) {
 			if (DELETE_EXISTING_COMMENT) {
-				core.info('Checking for existing comment on PR')
-				const deletedCommentId = await github.deleteExistingComment()
+				core.info('Checking for existing comment on PR');
+				const deletedCommentId = await github.deleteExistingComment();
 
-				if (deletedCommentId) core.info(`Deleted existing comment #${ deletedCommentId }`)
+				if (deletedCommentId)
+					core.info(`Deleted existing comment #${deletedCommentId}`);
 			}
 
 			if (CREATE_COMMENT) {
-				core.info('Creating new comment on PR')
+				core.info('Creating new comment on PR');
 				const body = `
 					This pull request has been deployed to Vercel.
 
 					<table>
 						<tr>
 							<td><strong>Latest commit:</strong></td>
-							<td><code>${ SHA.substring(0, 7) }</code></td>
+							<td><code>${SHA.substring(0, 7)}</code></td>
 						</tr>
 						<tr>
 							<td><strong>✅ Preview:</strong></td>
-							<td><a href='${ previewUrl }'>${ previewUrl }</a></td>
+							<td><a href='${previewUrl}'>${previewUrl}</a></td>
 						</tr>
 						<tr>
 							<td><strong>🔍 Inspect:</strong></td>
-							<td><a href='${ deployment.inspectorUrl }'>${ deployment.inspectorUrl }</a></td>
+							<td><a href='${deployment.inspectorUrl}'>${deployment.inspectorUrl}</a></td>
 						</tr>
 					</table>
 
-					[View Workflow Logs](${ LOG_URL })
-				`
+					[View Workflow Logs](${LOG_URL})
+				`;
 
-				const comment = await github.createComment(body)
-				core.info(`Comment created: ${ comment.html_url }`)
+				const comment = await github.createComment(body);
+				core.info(`Comment created: ${comment.html_url}`);
 			}
 
 			if (PR_LABELS) {
-				core.info('Adding label(s) to PR')
-				const labels = await github.addLabel()
+				core.info('Adding label(s) to PR');
+				const labels = await github.addLabel();
 
-				core.info(`Label(s) "${ labels.map((label) => label.name).join(', ') }" added`)
+				core.info(
+					`Label(s) "${labels.map((label) => label.name).join(', ')}" added`
+				);
 			}
 		}
 
-		core.setOutput('PREVIEW_URL', previewUrl)
-		core.setOutput('DEPLOYMENT_URLS', deploymentUrls)
-		core.setOutput('DEPLOYMENT_ID', deployment.id)
-		core.setOutput('DEPLOYMENT_INSPECTOR_URL', deployment.inspectorUrl)
-		core.setOutput('DEPLOYMENT_CREATED', true)
-		core.setOutput('COMMENT_CREATED', IS_PR && CREATE_COMMENT)
+		core.setOutput('PREVIEW_URL', previewUrl);
+		core.setOutput('DEPLOYMENT_URLS', deploymentUrls);
+		core.setOutput('DEPLOYMENT_ID', deployment.id);
+		core.setOutput('DEPLOYMENT_INSPECTOR_URL', deployment.inspectorUrl);
+		core.setOutput('DEPLOYMENT_CREATED', true);
+		core.setOutput('COMMENT_CREATED', IS_PR && CREATE_COMMENT);
 
-		core.info('Done')
+		core.info('Done');
 	} catch (err) {
-		await github.updateDeployment('failure')
-		core.setFailed(err.message)
+		await github.updateDeployment('failure');
+		core.setFailed(err.message);
 	}
-}
+};
 
 run()
 	.then(() => {})
 	.catch((err) => {
-		core.error('ERROR')
-		core.setFailed(err.message)
-	})
+		core.error('ERROR');
+		core.setFailed(err.message);
+	});
+
 })();
 
 module.exports = __webpack_exports__;
